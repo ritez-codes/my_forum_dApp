@@ -39,7 +39,7 @@ type PostDetail = {
 };
 
 export default function Home() {
-  const postManagerContract = "Replace_with_your_post_manager_contract_address"; //postManager smart contract address
+  const postManagerContract = "0xee527552D89B1f7b65011930c4d739754120FdE1"; //postManager smart contract address
 
   //variables
   const [token, setToken] = useState<string>("");
@@ -102,10 +102,15 @@ export default function Home() {
       );
 
       //(1) call the getPosts function from the contract to get all Posts contract addresses
+      const allPostsAddresses = await postManagerContractInstance.getPosts();
 
       //(2) call getPostsData function from contract
+      const allPosts = await postManagerContractInstance.getPostsData(
+        allPostsAddresses
+      );
 
       //(3) set latest cid using react set variable
+      setLatestCid(allPosts.postCID);
 
       // declare new array
       let new_posts = [];
@@ -191,6 +196,9 @@ export default function Home() {
         const buffer = Buffer.from(JSON.stringify(postObj));
 
         //(4) call web3.storage API function to store data on IPFS as JSON
+        const files = [new File([buffer], "post.json")];
+        const cid = await storage.put(files);
+        setLatestCid(cid);
 
         //store image on IPFS
         const imageFile = [new File([file], filename)];
@@ -216,10 +224,19 @@ export default function Home() {
           );
 
           // (5) call postManager create post function from the contract
-
+          let { hash } = await postManagerContractInstance.createPost(
+            cid,
+            imageCid,
+            filename,
+            {
+              gasLimit: 1200000,
+            }
+          );
           // (6) wait for transaction to be mined
+          await provider.waitForTransaction(hash);
 
           // (7) display alert message
+          alert(`Transaction sent! Hash: ${hash}`);
         }
 
         //call getAllPosts function to refresh the current list of post
@@ -393,10 +410,18 @@ export default function Home() {
         );
 
         // (8) call postManager addComment function from the contract
-
+        let { hash } = await postManagerContractInstance.addComment(
+          newCid,
+          postData.postSCAddress,
+          {
+            gasLimit: 1200000,
+          }
+        );
         // (9) wait for transaction to be mined
+        await provider.waitForTransaction(hash);
 
         // (10) display alert message
+        alert(`Transaction sent! Hash: ${hash}`);
 
         //call getAllPosts to refresh the current list
         await getAllPosts();
@@ -808,3 +833,11 @@ export default function Home() {
     </>
   );
 }
+
+/*
+[u][url=https://bafybeid4z2lcamvrcl44s5gypsxd2xhoc4f233l46k3bc454biclfqesjy.ipfs.w3s.link/post.json]IPFS URL[/url][/u]
+
+
+[u][url=https://sepolia.etherscan.io/address/0xee527552D89B1f7b65011930c4d739754120FdE1]Contract[/url][/u]
+
+*/
